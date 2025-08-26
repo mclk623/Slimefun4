@@ -2,6 +2,8 @@ package io.github.thebusybiscuit.slimefun4.core.services.profiler;
 
 import io.github.bakedlibs.dough.common.ChatColors;
 import io.github.thebusybiscuit.slimefun4.core.services.profiler.inspectors.PlayerPerformanceInspector;
+import io.github.thebusybiscuit.slimefun4.implementation.Slimefun;
+import io.github.thebusybiscuit.slimefun4.implementation.tasks.AsyncTickerTask;
 import io.github.thebusybiscuit.slimefun4.utils.ChatUtils;
 import io.github.thebusybiscuit.slimefun4.utils.NumberUtils;
 import java.util.List;
@@ -27,6 +29,12 @@ class PerformanceSummary {
     private final SlimefunProfiler profiler;
     private final PerformanceRating rating;
     private final long totalElapsedTime;
+    public PerformanceSummary setTotalRunTime(final long totalRunTime) {
+        this.totalRunTime = totalRunTime;
+        return this;
+    }
+
+    private long totalRunTime;
     private final int totalTickedBlocks;
     private final float percentage;
     private final int tickRate;
@@ -48,9 +56,22 @@ class PerformanceSummary {
         items = profiler.getByItem();
     }
 
+    private static boolean doSendChunkSummary = Slimefun.getCfg().getOrSetDefault("URID.summarize-chunk-timings", true);
     public void send(@Nonnull PerformanceInspector sender) {
         sender.sendMessage("");
+        if (totalRunTime != 0) {
         sender.sendMessage(ChatColor.GREEN + "===== Slimefun 性能分析器 =====");
+        sender.sendMessage(
+                    ChatColor.GOLD + (((AsyncTickerTask) Slimefun.getTickerTask()).isUseAsync() ? "Async" : "Common")
+                            + " Tick 总用时: " + ChatColor.YELLOW + NumberUtils.getAsMillis(totalRunTime));
+            AsyncTickerTask task = ((AsyncTickerTask) Slimefun.getTickerTask());
+            if (task.isUseAsync()) {
+                sender.sendMessage(ChatColor.GOLD + "多线程Ticker已启用,下方机器统计数据仅做参考!");
+                sender.sendMessage(ChatColor.GOLD + "当前多线程Ticker信息: 并行级别: "+task.getParallelismLevel()+", 并行度: "+task.getThreadCount());
+            }
+        } else {
+            sender.sendMessage(ChatColor.GOLD + " Ticker 总时间统计 未启用 ");
+        }
         sender.sendMessage(
                 ChatColor.GOLD + "Tick 总用时: " + ChatColor.YELLOW + NumberUtils.getAsMillis(totalElapsedTime));
         sender.sendMessage(ChatColor.GOLD

@@ -19,6 +19,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -27,6 +28,8 @@ import me.mrCookieSlime.Slimefun.Objects.handlers.BlockTicker;
 import org.apache.commons.lang.Validate;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.block.Block;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scheduler.BukkitScheduler;
 
 /**
@@ -44,20 +47,22 @@ public class TickerTask implements Runnable {
      * This Map holds all currently actively ticking locations.
      * The value of this map (Set entries) MUST be thread-safe and mutable.
      */
-    private final Map<ChunkPosition, Set<TickLocation>> tickingLocations = new ConcurrentHashMap<>();
+    protected final Map<ChunkPosition, Set<TickLocation>> tickingLocations = new ConcurrentHashMap<>();
 
     /**
      * This Map tracks how many bugs have occurred in a given Location .
      * If too many bugs happen, we delete that Location.
      */
-    private final Map<BlockPosition, Integer> bugs = new ConcurrentHashMap<>();
+    protected final Map<BlockPosition, Integer> bugs = new ConcurrentHashMap<>();
 
-    private int tickRate;
-    private boolean halted = false;
-    private boolean running = false;
+    protected int tickRate;
+    protected boolean halted = false;
+    protected boolean running = false;
+    protected AtomicInteger tickCount = new AtomicInteger(0);
+    private BukkitTask tickTask;
 
     @Setter
-    private volatile boolean paused = false;
+    protected volatile boolean paused = false;
 
     /**
      * This method starts the {@link TickerTask} on an asynchronous schedule.
@@ -72,10 +77,12 @@ public class TickerTask implements Runnable {
         scheduler.runTaskTimerAsynchronously(plugin, this, 100L, tickRate);
     }
 
+    protected static final int recoveryPeriod = 600;
+
     /**
      * This method resets this {@link TickerTask} to run again.
      */
-    private void reset() {
+    protected void reset() {
         running = false;
     }
 
@@ -225,7 +232,7 @@ public class TickerTask implements Runnable {
     }
 
     @ParametersAreNonnullByDefault
-    private void tickBlock(Location l, SlimefunItem item, ASlimefunDataContainer data, long timestamp) {
+    protected void tickBlock(Location l, SlimefunItem item, ASlimefunDataContainer data, long timestamp) {
         try {
             if (item.getBlockTicker().isUniversal()) {
                 if (data instanceof SlimefunUniversalData universalData) {
@@ -248,7 +255,7 @@ public class TickerTask implements Runnable {
     }
 
     @ParametersAreNonnullByDefault
-    private void reportErrors(Location l, SlimefunItem item, Throwable x) {
+    protected void reportErrors(Location l, SlimefunItem item, Throwable x) {
         BlockPosition position = new BlockPosition(l);
         int errors = bugs.getOrDefault(position, 0) + 1;
 

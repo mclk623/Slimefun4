@@ -131,6 +131,10 @@ class PlaceholderAPIIntegration extends PlaceholderExpansion {
             return Slimefun.getProfiler().getTime();
         }
 
+        if (isPlaceholder(p, false,params, "timings_run_time")){
+            return Slimefun.getProfiler().getRunTime();
+        }
+
         if (isPlaceholder(p, false, params, "language") && p instanceof Player player) {
             return Slimefun.getLocalization().getLanguage(player).getName(player);
         }

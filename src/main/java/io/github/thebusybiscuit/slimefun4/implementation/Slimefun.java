@@ -100,6 +100,7 @@ import io.github.thebusybiscuit.slimefun4.implementation.resources.GEOResourcesS
 import io.github.thebusybiscuit.slimefun4.implementation.setup.PostSetup;
 import io.github.thebusybiscuit.slimefun4.implementation.setup.ResearchSetup;
 import io.github.thebusybiscuit.slimefun4.implementation.setup.SlimefunItemSetup;
+import io.github.thebusybiscuit.slimefun4.implementation.tasks.AsyncTickerTask;
 import io.github.thebusybiscuit.slimefun4.implementation.tasks.SlimefunStartupTask;
 import io.github.thebusybiscuit.slimefun4.implementation.tasks.TickerTask;
 import io.github.thebusybiscuit.slimefun4.implementation.tasks.armor.RadiationTask;
@@ -122,10 +123,12 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
+import me.matl114.matlib.Algorithms.DataStructures.Complex.ObjectLockFactory;
 import me.mrCookieSlime.CSCoreLibPlugin.general.Inventory.MenuListener;
 import net.guizhanss.slimefun4.updater.AutoUpdateTask;
 import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -174,7 +177,8 @@ public final class Slimefun extends JavaPlugin implements SlimefunAddon, ICompat
     private final SlimefunDatabaseManager databaseManager = new SlimefunDatabaseManager(this);
     private final SlimefunRegistry registry = new SlimefunRegistry();
     private final SlimefunCommand command = new SlimefunCommand(this);
-    private final TickerTask ticker = new TickerTask();
+    private TickerTask ticker;// new TickerTask()
+    private ObjectLockFactory<Location> cargoLocationLockFactory;
     private PlayerChatCatcher chatCatcher;
 
     // Services - Systems that fulfill certain tasks, treat them as a black box
@@ -437,7 +441,11 @@ public final class Slimefun extends JavaPlugin implements SlimefunAddon, ICompat
         // Starting our tasks
         autoSavingService.start(this, config.getInt("options.auto-save-delay-in-minutes"));
         hologramsService.start();
+        ticker = new AsyncTickerTask();
         ticker.start(this);
+        cargoLocationLockFactory = new ObjectLockFactory<>(Location.class,Location::clone)
+                .init(this)
+                .setupRefreshTask(10*20*60);
 
         logger.log(Level.INFO, "正在加载第三方插件支持...");
         integrations.start();
@@ -488,6 +496,7 @@ public final class Slimefun extends JavaPlugin implements SlimefunAddon, ICompat
         // Finishes all started movements/removals of block data
         ticker.setPaused(true);
         ticker.halt();
+        cargoLocationLockFactory.deconstruct();
         /**try {
          * ticker.halt();
          * ticker.run();
@@ -863,6 +872,21 @@ public final class Slimefun extends JavaPlugin implements SlimefunAddon, ICompat
     public static @Nonnull TickerTask getTickerTask() {
         validateInstance();
         return instance.ticker;
+    }
+
+    /**
+     * This returns the {@link ObjectLockFactory} for cargo task
+     * executing Async Cargo Operation is of course NOT SAFE, especially when each addon use a different Lock Factory or sth
+     * so we provided a public LockFactory for these addons to execute Async Cargo Operation safely
+     * when doing cargo operation,such that: transferring large amount of items from one to another,or grabbing output items,UNORDERLY
+     * you should lock the location of both side of cargo operation
+     * be aware of the Location of {@link org.bukkit.inventory.DoubleChestInventory}
+     *
+     * @return
+     */
+    public static @Nonnull ObjectLockFactory<Location> getCargoLockFactory(){
+        validateInstance();
+        return instance.cargoLocationLockFactory;
     }
 
     /**

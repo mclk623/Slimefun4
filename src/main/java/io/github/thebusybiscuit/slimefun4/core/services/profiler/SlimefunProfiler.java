@@ -79,6 +79,8 @@ public class SlimefunProfiler {
     @Getter
     private volatile boolean isProfiling = false;
 
+    private volatile long startTime;
+    private long totalNsRunTime;
     /**
      * This {@link AtomicInteger} holds the amount of blocks that still need to be
      * profiled.
@@ -113,6 +115,7 @@ public class SlimefunProfiler {
         isProfiling = true;
         queued.set(0);
         timings.clear();
+        startTime = System.nanoTime();
     }
 
     /**
@@ -179,6 +182,7 @@ public class SlimefunProfiler {
      */
     public void stop() {
         isProfiling = false;
+        totalNsRunTime = (System.nanoTime() - startTime);
 
         if (Slimefun.instance() == null || !Slimefun.instance().isEnabled()) {
             // Slimefun has been disabled
@@ -202,6 +206,7 @@ public class SlimefunProfiler {
     private void finishReport() {
         // We will only wait for a maximum of this many 1ms sleeps
         int iterations = 4000;
+        long totalRuntime = totalNsRunTime;
 
         // Wait for all timing results to come in
         while (!isProfiling && queued.get() > 0) {
@@ -251,7 +256,7 @@ public class SlimefunProfiler {
         ticksPassed.incrementAndGet();
 
         if (!requests.isEmpty()) {
-            PerformanceSummary summary = new PerformanceSummary(this, totalElapsedTime, timings.size());
+            PerformanceSummary summary = new PerformanceSummary(this, totalElapsedTime, timings.size()).setTotalRunTime(totalRuntime);
             Iterator<PerformanceInspector> iterator = requests.iterator();
 
             while (iterator.hasNext()) {
@@ -382,6 +387,10 @@ public class SlimefunProfiler {
     @Nonnull
     public String getTime() {
         return NumberUtils.getAsMillis(totalElapsedTime);
+    }
+
+    public String getRunTime(){
+        return NumberUtils.getAsMillis(totalNsRunTime);
     }
 
     public int getTickRate() {
