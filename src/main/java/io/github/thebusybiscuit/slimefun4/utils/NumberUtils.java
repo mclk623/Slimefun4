@@ -287,18 +287,22 @@ public final class NumberUtils {
      * @return {@link Integer#MAX_VALUE} if overflow detected, {@link Integer#MIN_VALUE} if underflow detected, otherwise the sum of a and b
      */
     public static int flowSafeAddition(int a, int b) {
-        return limitedAddition(a, b, Integer.MIN_VALUE, Integer.MAX_VALUE);
+        return (int) limitedAddition(a, b, Integer.MIN_VALUE, Integer.MAX_VALUE);
+    }
+
+    public static long flowSafeAddition(long a, long b) {
+        return limitedAddition(a, b, Long.MIN_VALUE, Long.MAX_VALUE);
     }
 
     /**
-     * This detects if 2 integers will overflow/underflow past a maximum or minimum value and if they will, returns the corresponding value
-     * @param a the first integer
-     * @param b the second integer
+     * This detects if 2 integers/longs will overflow/underflow past a maximum or minimum value and if they will, returns the corresponding value
+     * @param a the first number
+     * @param b the second number
      * @param min the minimum value for the operation
      * @param max the maximum value for the operation
      * @return max if overflow detected, min if underflow detected, otherwise the sum of a and b
      */
-    public static int limitedAddition(int a, int b, int min, int max) {
+    public static long limitedAddition(long a, long b, long min, long max) {
         boolean willOverflow = (a == max && b > 0 || b == max && a > 0) || a > 0 && b > max - a;
 
         if (willOverflow) {
@@ -312,5 +316,17 @@ public final class NumberUtils {
         } else {
             return a + b;
         }
+    }
+
+    public static int longToInt(long l) {
+        if (l <= Integer.MIN_VALUE) {
+            return Integer.MIN_VALUE;
+        }
+
+        if (l >= Integer.MAX_VALUE) {
+            return Integer.MAX_VALUE;
+        }
+
+        return (int) l;
     }
 }

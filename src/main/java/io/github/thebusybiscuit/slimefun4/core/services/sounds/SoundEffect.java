@@ -230,11 +230,15 @@ public enum SoundEffect {
     private Sound getPlaySound(String soundId) {
         Sound playSound = null;
 
-        try {
-            playSound = Sound.valueOf(soundId);
-        } catch (Exception e) {
-            if (SlimefunExtended.getMinecraftVersion().isAtLeast(1, 21, 4)) {
-                playSound = Registry.SOUNDS.get(NamespacedKey.minecraft(soundId.toLowerCase(Locale.ROOT)));
+        if (SlimefunExtended.getMinecraftVersion().isAtLeast(1, 21, 3)) {
+            playSound = Registry.SOUNDS.get(NamespacedKey.minecraft(soundId.toLowerCase(Locale.ROOT)));
+        }
+
+        if (playSound == null) {
+            try {
+                playSound = VersionedSound.valueOf(soundId);
+            } catch (IllegalArgumentException e) {
+                Slimefun.logger().log(Level.SEVERE, e, e::getMessage);
             }
         }
 
